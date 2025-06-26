@@ -3,6 +3,7 @@ import streamlit as st
 import webbrowser
 from urllib.parse import quote
 import pandas as pd
+from io import BytesIO
 
 # Login simples
 def login():

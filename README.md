@@ -1,2 +1,2 @@
 # Painel ImóveisH
-Painel para validação de imóveis via WhatsApp com exportação para Excel.
+Painel com exportação Excel corrigido.
