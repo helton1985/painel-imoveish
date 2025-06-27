@@ -1,11 +1,15 @@
 
 import streamlit as st
-import webbrowser
-from urllib.parse import quote
 import pandas as pd
 from io import BytesIO
+from urllib.parse import quote
 
-# Login simples
+# Função para gerar link WhatsApp com mensagem personalizada
+def gerar_link_whatsapp(row):
+    msg = f"""Olá {row['nome']}, tudo bem?%0a%0aSou o corretor Helton da ImoveisH (www.imoveish.com.br).%0a%0aVerificamos que você possui um imóvel cadastrado com as seguintes informações:%0a📍 Endereço: {row['endereco']}, nº {row['numero']}, apto {row['apto']}%0a💰 Valor de venda: R$ {row['venda']}%0a🏢 Condomínio: R$ {row['cond']}%0a📄 IPTU: R$ {row['iptu']}%0a%0aGostaria de confirmar se este imóvel ainda está disponível para venda e se os valores acima estão atualizados.%0a%0aAgradeço desde já pela atenção."""
+    return f"https://wa.me/55{row['telefone']}?text={quote(msg)}"
+
+# Login
 def login():
     st.title("Painel ImóveisH - Login")
     user = st.text_input("Usuário")
@@ -16,59 +20,26 @@ def login():
         else:
             st.error("Usuário ou senha inválidos.")
 
-# Dados mockados
-dados = [
-    {
-        "nome": "João da Silva",
-        "telefone": "11999999999",
-        "endereco": "Rua das Flores",
-        "numero": "123",
-        "apto": "12",
-        "venda": "450.000",
-        "cond": "500",
-        "iptu": "120"
-    },
-    {
-        "nome": "Maria Oliveira",
-        "telefone": "11888888888",
-        "endereco": "Av. Paulista",
-        "numero": "1000",
-        "apto": "101",
-        "venda": "650.000",
-        "cond": "700",
-        "iptu": "180"
-    }
-]
-
-# Mensagem padrão para WhatsApp
-def gerar_link_whatsapp(d):
-    msg = f"Olá {d['nome']}, tudo bem?%0a%0aSou o corretor Helton da ImoveisH (www.imoveish.com.br).%0a%0aVerificamos que você possui um imóvel cadastrado com as seguintes informações:%0a📍 Endereço: {d['endereco']}, nº {d['numero']}, apto {d['apto']}%0a💰 Valor de venda: R$ {d['venda']}%0a🏢 Condomínio: R$ {d['cond']}%0a📄 IPTU: R$ {d['iptu']}%0a%0aGostaria de confirmar se este imóvel ainda está disponível para venda e se os valores acima estão atualizados.%0a%0aAgradeço desde já pela atenção."
-    return f"https://wa.me/55{d['telefone']}?text={quote(msg)}"
-
-# Função para download do Excel
-def baixar_excel(dados):
-    df = pd.DataFrame(dados)
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False)
-    st.download_button(
-        label="📥 Baixar Excel dos Imóveis",
-        data=output.getvalue(),
-        file_name="imoveis.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-
-# Painel principal
+# Painel principal com upload
 def painel():
-    st.title("Painel ImóveisH - Validação de Imóveis")
-    baixar_excel(dados)
-    for d in dados:
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            st.markdown(f"**{d['nome']}** - {d['endereco']}, nº {d['numero']}, apto {d['apto']}")
-        with col2:
-            url = gerar_link_whatsapp(d)
-            st.link_button("Enviar WhatsApp", url, use_container_width=True)
+    st.title("Painel ImóveisH - Validação de Imóveis via Excel")
+    st.markdown("📤 Faça upload de uma planilha `.xlsx` com os seguintes campos obrigatórios:")
+    st.code("nome, telefone, endereco, numero, apto, venda, cond, iptu")
+    uploaded_file = st.file_uploader("Escolha o arquivo Excel (.xlsx)", type=["xlsx"])
+
+    if uploaded_file:
+        try:
+            df = pd.read_excel(uploaded_file)
+            st.success(f"{len(df)} imóveis carregados com sucesso!")
+            for idx, row in df.iterrows():
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.markdown(f"**{row['nome']}** - {row['endereco']}, nº {row['numero']}, apto {row['apto']}")
+                with col2:
+                    url = gerar_link_whatsapp(row)
+                    st.link_button("Enviar WhatsApp", url, use_container_width=True)
+        except Exception as e:
+            st.error("Erro ao processar o arquivo. Verifique se todos os campos estão corretos.")
 
 # Execução
 if "logado" not in st.session_state:
