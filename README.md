@@ -1,1 +1,1 @@
-# Painel ImóveisH com upload de Excel para validação de imóveis.
+# Painel ImóveisH com mapeamento automático de colunas de Excel.
