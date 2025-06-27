@@ -1,2 +1,2 @@
 # Painel ImóveisH
-Painel com exportação Excel corrigido.
+Painel com login, upload de Excel, envio via WhatsApp por imóvel.
