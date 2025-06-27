@@ -3,47 +3,60 @@ import streamlit as st
 import pandas as pd
 import urllib.parse
 
-st.set_page_config(page_title="Painel ImóveisH - Validação", layout="wide")
+st.set_page_config(page_title="Painel ImóveisH - Validação de Imóveis via Excel")
 
 st.title("Painel ImóveisH - Validação de Imóveis via Excel")
-
-st.markdown("📂 Faça upload da planilha (.xlsx) com os seguintes campos obrigatórios:")
-st.code("nome, telefone, endereco, numero, apto, venda, cond, iptu")
-
-def telefone_valido(telefone):
-    if isinstance(telefone, str):
-        telefone = ''.join(filter(str.isdigit, telefone))
-    return telefone.startswith("55") and 11 <= len(telefone) <= 13
-
-def gerar_mensagem(row):
-    msg = (
-        f"Olá {row['nome']}, tudo bem?%0a%0a"
-        "Sou o corretor Helton da ImoveisH (www.imoveish.com.br).%0a%0a"
-        "Verificamos que você possui um imóvel cadastrado com as seguintes informações:%0a"
-        f"📍 Endereço: {row['endereco']}, nº {row['numero']}, apto {row['apto']}%0a"
-        f"💰 Valor de venda: R$ {row['venda']}%0a"
-        f"🏢 Condomínio: R$ {row['cond']}%0a"
-        f"📄 IPTU: R$ {row['iptu']}%0a%0a"
-        "Gostaria de confirmar se este imóvel ainda está disponível para venda e se os valores acima estão atualizados.%0a%0a"
-        "Agradeço desde já pela atenção."
-    )
-    return msg
+st.markdown("📥 Faça upload de uma planilha `.xlsx` com os seguintes campos obrigatórios:")
+st.code("nome, telefone, endereco, numero, apto, venda, cond, iptu", language="markdown")
 
 uploaded_file = st.file_uploader("Escolha o arquivo Excel (.xlsx)", type=["xlsx"])
 
 if uploaded_file:
-    try:
-        df = pd.read_excel(uploaded_file)
-        st.success(f"{len(df)} imóveis carregados com sucesso!")
-        for idx, row in df.iterrows():
-            telefone = str(row["telefone"])
-            endereco = f"{row['endereco']}, nº {row['numero']}, apto {row['apto']}"
-            if telefone_valido(telefone):
-                msg = gerar_mensagem(row)
-                url = f"https://api.whatsapp.com/send?phone={telefone}&text={msg}"
-                st.markdown(f"✅ {endereco} - [Enviar]({url})", unsafe_allow_html=True)
-            else:
-                st.markdown(f"❌ {endereco} - Telefone inválido")
-    except Exception as e:
-        st.error("Erro ao processar o arquivo. Verifique se todos os campos estão corretos.")
-        st.exception(e)
+    df = pd.read_excel(uploaded_file)
+    st.success(f"{len(df)} imóveis carregados com sucesso!")
+
+    # Normalizar os nomes das colunas para evitar erro com 'telefone'
+    df.columns = [col.lower().strip().replace(" ", "_").replace("/", "_") for col in df.columns]
+
+    telefone_col = None
+    for col in df.columns:
+        if "telefone" in col or "celular" in col:
+            telefone_col = col
+            break
+
+    if not telefone_col:
+        st.error("Erro: Nenhuma coluna de telefone encontrada na planilha.")
+    else:
+        for index, row in df.iterrows():
+            try:
+                nome = str(row.get("nome", ""))
+                endereco = str(row.get("endereco", ""))
+                numero = str(row.get("numero", ""))
+                apto = str(row.get("apto", ""))
+                venda = str(row.get("venda", ""))
+                cond = str(row.get("cond", ""))
+                iptu = str(row.get("iptu", ""))
+                telefone = str(row.get(telefone_col, ""))
+
+                # Validar telefone com 11 dígitos após o 55
+                if telefone.startswith("55") and len(telefone) == 13:
+                    mensagem = f"""Olá {nome}, tudo bem?
+
+Sou o corretor Helton da ImoveisH (www.imoveish.com.br).
+
+Verificamos que você possui um imóvel cadastrado com as seguintes informações:
+📍 Endereço: {endereco}, nº {numero}, apto {apto}
+💰 Valor de venda: R$ {venda}
+🏢 Condomínio: R$ {cond}
+📄 IPTU: R$ {iptu}
+
+Gostaria de confirmar se este imóvel ainda está disponível para venda e se os valores acima estão atualizados.
+
+Agradeço desde já pela atenção."""
+                    mensagem_encoded = urllib.parse.quote(mensagem)
+                    link_whatsapp = f"https://api.whatsapp.com/send?phone={telefone}&text={mensagem_encoded}"
+                    st.markdown(f"✅ **{endereco}, nº {numero}, apto {apto}** - [📩 Enviar WhatsApp]({link_whatsapp})", unsafe_allow_html=True)
+                else:
+                    st.markdown(f"❌ **{endereco}, nº {numero}, apto {apto}** - Telefone inválido")
+            except Exception as e:
+                st.markdown(f"❌ Erro na linha {index + 2}: {e}")
