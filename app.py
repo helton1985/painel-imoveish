@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 from urllib.parse import quote
+import re
 
 # Mapeamento de colunas alternativas
 colunas_aceitas = {
@@ -26,14 +27,24 @@ colunas_aceitas = {
 
 # Gerar link WhatsApp
 def gerar_link_whatsapp(row):
+    def limpar_tel(t):
+        t = str(t)
+        t = re.sub(r"[^\d]", "", t)
+        if len(t) >= 10:
+            return t
+        return ""
+
     nome = str(row.get("nome", "") or "")
-    telefone = str(row.get("telefone", "") or "")
+    telefone = limpar_tel(row.get("telefone", ""))
     endereco = str(row.get("endereco", "") or "")
     numero = str(row.get("numero", "") or "")
     apto = str(row.get("apto", "") or "")
     venda = str(row.get("venda", "") or "")
     cond = str(row.get("cond", "") or "")
     iptu = str(row.get("iptu", "") or "")
+
+    if not telefone:
+        return ""
 
     msg = f"Olá {nome}, tudo bem?%0a%0aSou o corretor Helton da ImoveisH (www.imoveish.com.br).%0a%0aVerificamos que você possui um imóvel cadastrado com as seguintes informações:%0a📍 Endereço: {endereco}, nº {numero}, apto {apto}%0a💰 Valor de venda: R$ {venda}%0a🏢 Condomínio: R$ {cond}%0a📄 IPTU: R$ {iptu}%0a%0aGostaria de confirmar se este imóvel ainda está disponível para venda e se os valores acima estão atualizados.%0a%0aAgradeço desde já pela atenção."
     return f"https://wa.me/55{telefone}?text={quote(msg)}"
@@ -80,7 +91,10 @@ def painel():
                     st.markdown(f"**{row.get('nome', '')}** - {row.get('endereco', '')}, nº {row.get('numero', '')}, apto {row.get('apto', '')}")
                 with col2:
                     url = gerar_link_whatsapp(row)
-                    st.link_button("Enviar WhatsApp", url, use_container_width=True)
+                    if url:
+                        st.link_button("Enviar WhatsApp", url, use_container_width=True)
+                    else:
+                        st.markdown("❌ Telefone inválido")
         except Exception as e:
             st.error("Erro ao processar o arquivo. Verifique se a planilha está no formato correto.")
 
