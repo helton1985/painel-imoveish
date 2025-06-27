@@ -1,54 +1,59 @@
 
 import streamlit as st
 import pandas as pd
-from io import BytesIO
-from urllib.parse import quote
+import time
+from login_utils import autenticar_usuario
 
-# Sessão de login
+st.set_page_config(page_title="Painel ImoveisH", layout="wide")
+
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+
+if 'usuario' not in st.session_state:
+    st.session_state.usuario = ""
+
 def login():
-    st.title("Painel ImóveisH - Login")
-    usuario = st.text_input("Usuário")
-    senha = st.text_input("Senha", type="password")
+    st.image("logo_imoveish.png", width=200)
+    st.title("Login - Painel ImoveisH")
+    username = st.text_input("Usuário")
+    password = st.text_input("Senha", type="password")
     if st.button("Entrar"):
-        if usuario == "helton1985" and senha == "Indira1986@":
-            st.session_state["logado"] = True
+        if autenticar_usuario(username, password):
+            st.session_state.logged_in = True
+            st.session_state.usuario = username
+            st.experimental_rerun()
         else:
-            st.error("Usuário ou senha inválidos.")
+            st.error("Usuário ou senha incorretos.")
 
-# Gera o link de WhatsApp
-def gerar_link(d):
-    msg = f"""Olá {d['nome']}, tudo bem?%0a%0aSou o corretor Helton da ImoveisH (www.imoveish.com.br).%0a
-Verificamos que você possui um imóvel cadastrado com as seguintes informações:%0a
-📍 Endereço: {d['endereco']}, nº {d['numero']}, apto {d['apto']}%0a
-💰 Valor de venda: R$ {d['venda']}%0a🏢 Condomínio: R$ {d['cond']}%0a📄 IPTU: R$ {d['iptu']}%0a%0a
-Gostaria de confirmar se este imóvel ainda está disponível para venda e se os valores acima estão atualizados.%0a
-Agradeço desde já pela atenção."""
-    return f"https://wa.me/55{d['telefone']}?text={quote(msg)}"
-
-# Gera botão de download da planilha
-def baixar_excel(df):
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False)
-    st.download_button("📥 Baixar Excel Atual", output.getvalue(), file_name="imoveis_atual.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-# Interface principal
 def painel():
-    st.title("Painel ImóveisH - Validação de Imóveis")
-    arquivo = st.file_uploader("📤 Enviar planilha Excel dos imóveis", type=["xlsx"])
-    if arquivo:
-        df = pd.read_excel(arquivo)
-        baixar_excel(df)
-        for i, row in df.iterrows():
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                st.markdown(f"**{row['nome']}** - {row['endereco']}, nº {row['numero']}, apto {row['apto']}")
-            with col2:
-                url = gerar_link(row)
-                st.link_button("Enviar WhatsApp", url, use_container_width=True)
+    st.sidebar.success(f"Logado como: {st.session_state.usuario}")
+    st.title("Envio Automático - ImoveisH")
+    uploaded_file = st.file_uploader("Enviar planilha Excel", type=["xlsx"])
+    tempo_envio = st.selectbox("Frequência de envio (segundos)", [1, 2, 3, 4, 5, 10, 15, 20, 30, 60])
+    celular_base = st.text_input("Número de WhatsApp base", value="11992979858")
 
-# Execução principal
-if "logado" not in st.session_state:
+    if uploaded_file:
+        df = pd.read_excel(uploaded_file)
+        st.write("Pré-visualização da planilha:")
+        st.dataframe(df)
+
+        if st.button("Iniciar Envio"):
+            for idx, row in df.iterrows():
+                nome = row.get("Proprietário", "")
+                endereco = row.get("Endereço", "")
+                numero = row.get("Número", "")
+                apto = row.get("apto", "")
+                venda = row.get("Valor Venda", "")
+                cond = row.get("Valor Condomínio", "")
+                iptu = row.get("Valor IPTU", "")
+                celular = row.get("Celular/Telefone", "")
+
+                msg = f"Olá {nome}, tudo bem?%0a%0aSou o corretor Helton da ImoveisH (www.imoveish.com.br).%0a%0aVerificamos que você possui um imóvel cadastrado com as seguintes informações:%0a📍 Endereço: {endereco}, nº {numero}, apto {apto}%0a💰 Valor de venda: R$ {venda}%0a🏢 Condomínio: R$ {cond}%0a📄 IPTU: R$ {iptu}%0a%0aGostaria de confirmar se este imóvel ainda está disponível para venda e se os valores acima estão atualizados.%0a%0aCaso esteja disponível, podemos continuar com a divulgação para noss...
+                link = f"https://wa.me/55{str(celular)}?text={msg}"
+                st.markdown(f"[Abrir mensagem para {nome}]({link})", unsafe_allow_html=True)
+                time.sleep(tempo_envio)
+
+if not st.session_state.logged_in:
     login()
 else:
     painel()
