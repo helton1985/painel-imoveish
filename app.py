@@ -26,8 +26,17 @@ colunas_aceitas = {
 
 # Gerar link WhatsApp
 def gerar_link_whatsapp(row):
-    msg = f"""Olá {row['nome']}, tudo bem?%0a%0aSou o corretor Helton da ImoveisH (www.imoveish.com.br).%0a%0aVerificamos que você possui um imóvel cadastrado com as seguintes informações:%0a📍 Endereço: {row['endereco']}, nº {row['numero']}, apto {row['apto']}%0a💰 Valor de venda: R$ {row['venda']}%0a🏢 Condomínio: R$ {row['cond']}%0a📄 IPTU: R$ {row['iptu']}%0a%0aGostaria de confirmar se este imóvel ainda está disponível para venda e se os valores acima estão atualizados.%0a%0aAgradeço desde já pela atenç...
-    return f"https://wa.me/55{row['telefone']}?text={quote(msg)}"
+    nome = str(row.get("nome", "") or "")
+    telefone = str(row.get("telefone", "") or "")
+    endereco = str(row.get("endereco", "") or "")
+    numero = str(row.get("numero", "") or "")
+    apto = str(row.get("apto", "") or "")
+    venda = str(row.get("venda", "") or "")
+    cond = str(row.get("cond", "") or "")
+    iptu = str(row.get("iptu", "") or "")
+
+    msg = f"Olá {nome}, tudo bem?%0a%0aSou o corretor Helton da ImoveisH (www.imoveish.com.br).%0a%0aVerificamos que você possui um imóvel cadastrado com as seguintes informações:%0a📍 Endereço: {endereco}, nº {numero}, apto {apto}%0a💰 Valor de venda: R$ {venda}%0a🏢 Condomínio: R$ {cond}%0a📄 IPTU: R$ {iptu}%0a%0aGostaria de confirmar se este imóvel ainda está disponível para venda e se os valores acima estão atualizados.%0a%0aAgradeço desde já pela atenção."
+    return f"https://wa.me/55{telefone}?text={quote(msg)}"
 
 # Padronizar colunas
 def padronizar_colunas(df):
@@ -51,7 +60,7 @@ def login():
         else:
             st.error("Usuário ou senha inválidos.")
 
-# Painel com upload
+# Painel
 def painel():
     st.title("Painel ImóveisH - Validação de Imóveis via Excel")
     uploaded_file = st.file_uploader("📤 Faça upload da planilha (.xlsx)", type=["xlsx"])
@@ -61,14 +70,14 @@ def painel():
             df = pd.read_excel(uploaded_file)
             df = padronizar_colunas(df)
             obrigatorias = ["nome", "telefone", "endereco", "numero", "apto", "venda", "cond", "iptu"]
-            if not all(col in df.columns for col in obrigatorias):
-                st.error("Planilha inválida. Verifique se os campos obrigatórios estão presentes.")
-                return
+            for col in obrigatorias:
+                if col not in df.columns:
+                    df[col] = ""
             st.success(f"{len(df)} imóveis carregados com sucesso!")
             for _, row in df.iterrows():
                 col1, col2 = st.columns([3, 1])
                 with col1:
-                    st.markdown(f"**{row['nome']}** - {row['endereco']}, nº {row['numero']}, apto {row['apto']}")
+                    st.markdown(f"**{row.get('nome', '')}** - {row.get('endereco', '')}, nº {row.get('numero', '')}, apto {row.get('apto', '')}")
                 with col2:
                     url = gerar_link_whatsapp(row)
                     st.link_button("Enviar WhatsApp", url, use_container_width=True)
