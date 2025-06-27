@@ -40,12 +40,12 @@ dados = [
     }
 ]
 
-# Mensagem padrão
+# Mensagem padrão para WhatsApp
 def gerar_link_whatsapp(d):
     msg = f"Olá {d['nome']}, tudo bem?%0a%0aSou o corretor Helton da ImoveisH (www.imoveish.com.br).%0a%0aVerificamos que você possui um imóvel cadastrado com as seguintes informações:%0a📍 Endereço: {d['endereco']}, nº {d['numero']}, apto {d['apto']}%0a💰 Valor de venda: R$ {d['venda']}%0a🏢 Condomínio: R$ {d['cond']}%0a📄 IPTU: R$ {d['iptu']}%0a%0aGostaria de confirmar se este imóvel ainda está disponível para venda e se os valores acima estão atualizados.%0a%0aAgradeço desde já pela atenção."
     return f"https://wa.me/55{d['telefone']}?text={quote(msg)}"
 
-# Download Excel
+# Função para download do Excel
 def baixar_excel(dados):
     df = pd.DataFrame(dados)
     output = BytesIO()
@@ -58,7 +58,7 @@ def baixar_excel(dados):
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-# App principal
+# Painel principal
 def painel():
     st.title("Painel ImóveisH - Validação de Imóveis")
     baixar_excel(dados)
